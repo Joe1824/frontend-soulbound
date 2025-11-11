@@ -66,40 +66,32 @@ export const RegistrationSubmission: React.FC = () => {
       setProgress(Math.min(progress, 100));
     }
 
-    // Prepare payload for backend API
-    const verificationResult = registrationData.verificationResult as {
-      extractedData?: Record<string, unknown>;
-    };
 
     const payload = {
       walletAddress: registrationData.walletAddress,
       signature: registrationData.signature,
       message: registrationData.message,
       embedding: registrationData.biometricData?.embeddings || [],
-      ...(verificationResult?.extractedData || {}),
+      profile: registrationData.profile,
+      AadharNumber: registrationData.AadharNumber,
     };
 
     console.log("Submitting to backend:", payload);
 
     // TODO: Replace with actual API call
-    // const response = await fetch('/api/register-nft', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload)
-    // });
-    // const result = await response.json();
+    const response = await fetch('http://localhost:5000/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-    // Simulate successful response
-    const tokenId = `NFT-${Date.now()}-${Math.random()
-      .toString(36)
-      .substr(2, 9)
-      .toUpperCase()}`;
-    const transactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-
+    const result = await response.json();
+    
     return {
-      success: true,
-      tokenId,
-      transactionHash,
+      success: result.message,
+      tokenId: result.tokenId,
+      transactionHash: result.transactionHash,
+      error: result.error,
     };
   };
 
@@ -110,7 +102,7 @@ export const RegistrationSubmission: React.FC = () => {
 
     try {
       // Validate required data
-      const { walletAddress, signature, message, biometricData, aadharFile } =
+      const { walletAddress, signature, message, biometricData,profile,AadharNumber } =
         registrationData;
 
       if (
@@ -118,7 +110,8 @@ export const RegistrationSubmission: React.FC = () => {
         !signature ||
         !message ||
         !biometricData ||
-        !aadharFile
+        !profile||
+        !AadharNumber
       ) {
         throw new Error("Missing required registration data");
       }
@@ -194,7 +187,7 @@ export const RegistrationSubmission: React.FC = () => {
 
   // Auto-validate data on component mount
   useEffect(() => {
-    const { walletAddress, signature, message, biometricData, aadharFile } =
+    const {  walletAddress, signature, message, biometricData,profile,AadharNumber } =
       registrationData;
 
     if (
@@ -202,7 +195,8 @@ export const RegistrationSubmission: React.FC = () => {
       !signature ||
       !message ||
       !biometricData ||
-      !aadharFile
+      !profile || 
+      !AadharNumber
     ) {
       toast({
         title: "Incomplete Data",
@@ -213,9 +207,9 @@ export const RegistrationSubmission: React.FC = () => {
   }, [registrationData, toast]);
 
   const isDataComplete = () => {
-    const { walletAddress, signature, message, biometricData, aadharFile } =
+    const { walletAddress, signature, message, biometricData, profile, AadharNumber } =
       registrationData;
-    return walletAddress && signature && message && biometricData && aadharFile;
+    return walletAddress && signature && message && biometricData && profile && AadharNumber;
   };
 
   return (
@@ -262,9 +256,9 @@ export const RegistrationSubmission: React.FC = () => {
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <span className="text-sm">Document Upload</span>
               <Badge
-                variant={registrationData.aadharFile ? "default" : "secondary"}
+                variant={registrationData.profile ? "default" : "secondary"}
               >
-                {registrationData.aadharFile ? "✓ Uploaded" : "✗ Missing"}
+                {registrationData.profile ? "✓ Uploaded" : "✗ Missing"}
               </Badge>
             </div>
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
