@@ -35,6 +35,7 @@ export const BiometricCapture: React.FC = () => {
   const [lastCaptureData, setLastCaptureData] = useState(
     registrationData.biometricData
   );
+  const [error, setError] = useState<string | null>(null);
 
   // 🔹 Simulate SDK initialization
   const [isInitialized, setIsInitialized] = useState(false);
@@ -43,44 +44,71 @@ export const BiometricCapture: React.FC = () => {
     setTimeout(() => setIsInitialized(true), 1000); // simulate init delay
   }, []);
 
-  // 🔹 Start mock biometric capture
+  // 🔹 Start biometric capture via API
   const handleStartCapture = async () => {
     try {
       setIsCapturing(true);
       setShowCaptureAnimation(true);
       setConfidenceScore(0);
+      setError(null);
 
-      // Simulate confidence score gradually increasing
+      // Simulate confidence score gradually increasing during capture
       const interval = setInterval(() => {
         setConfidenceScore((prev) => Math.min(prev + Math.random() * 20, 95));
       }, 100);
 
-      // Simulate delay for "capturing"
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Call the API
+      const response = await fetch("http://127.0.0.1:7700/start-liveness", {
+        method: "POST", // Assuming POST, adjust if needed
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
       clearInterval(interval);
 
-      // ✅ Create a static embedding (mocked)
-      const mockEmbedding = [0.12, 0.34, 0.56, 0.78];
+      if (data.success) {
+        if (data.result.verdict === "Live Verified (peak-pass)") {
+          // Successful liveness
+          const biometricData: BiometricData = {
+            confidence: data.result.avg_live,
+            embeddings: data.result.meta.embedding,
+            timestamp: data.result.meta.timestamp,
+          };
 
-      const mockBiometricData: BiometricData = {
-        confidence: 0.95,
-        embeddings: mockEmbedding,
-        timestamp: Date.now(),
-      };
+          // ✅ Update store
+          updateRegistrationData({ biometricData });
 
-      // ✅ Update store
-      updateRegistrationData({ biometricData: mockBiometricData });
+          // ✅ Local UI updates
+          setLastCaptureData(biometricData);
+          setConfidenceScore(100);
+          setCaptureAttempts((prev) => prev + 1);
+          setShowCaptureAnimation(false);
+          setIsCapturing(false);
 
-      // ✅ Local UI updates
-      setLastCaptureData(mockBiometricData);
-      setConfidenceScore(100);
-      setCaptureAttempts((prev) => prev + 1);
-      setShowCaptureAnimation(false);
-      setIsCapturing(false);
-
-      triggerSuccessAnimation(cardRef.current);
+          triggerSuccessAnimation(cardRef.current);
+        } else if (data.result.verdict === "Spoof Detected") {
+          // Spoof detected
+          setError("Spoof detected. Please try again with a real face.");
+          setIsCapturing(false);
+          setShowCaptureAnimation(false);
+        } else {
+          throw new Error("Unexpected verdict from API");
+        }
+      } else {
+        throw new Error("API returned success: false");
+      }
     } catch (err) {
-      console.error("Mock capture failed:", err);
+      console.error("Capture failed:", err);
+      setError(
+        err instanceof Error ? err.message : "An error occurred during capture."
+      );
       setIsCapturing(false);
       setShowCaptureAnimation(false);
     }
@@ -161,16 +189,14 @@ export const BiometricCapture: React.FC = () => {
                 {isCapturing ? "Scanning..." : "Ready for Capture"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Click start to generate your biometric embedding (mocked).
+                Click start to generate your biometric embedding.
               </p>
             </div>
 
             {isCapturing && (
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="font-medium animate-pulse">
-                    Generating mock embedding...
-                  </p>
+                  <p className="font-medium animate-pulse">Capturing Face...</p>
                   <p className="text-sm text-muted-foreground">
                     Please wait a moment
                   </p>
@@ -188,8 +214,14 @@ export const BiometricCapture: React.FC = () => {
                 className="w-full gradient-bg hover:opacity-90 transition-opacity"
               >
                 <Scan className="w-4 h-4 mr-2" />
-                Start Mock Capture
+                Start Capture
               </Button>
+            )}
+
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
             )}
           </>
         )}
@@ -200,7 +232,7 @@ export const BiometricCapture: React.FC = () => {
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               <div className="flex-1">
                 <p className="font-medium text-green-500">
-                   Biometric Data Generated
+                  Biometric Data Generated
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Ready to proceed to document upload
@@ -211,12 +243,14 @@ export const BiometricCapture: React.FC = () => {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Confidence Score</p>
-                <p className="font-medium text-green-500">95%</p>
+                <p className="font-medium text-green-500">
+                  {(lastCaptureData.confidence * 100).toFixed(2)}%
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Embeddings</p>
-                <p className="font-mono">
-                  [{"................."}]
+                <p className="font-mono text-xs">
+                  [{lastCaptureData.embeddings.slice(0, 5).join(", ")}...]
                 </p>
               </div>
             </div>
@@ -243,14 +277,14 @@ export const BiometricCapture: React.FC = () => {
         {captureAttempts > 0 && (
           <div className="text-center">
             <p className="text-xs text-muted-foreground">
-               capture attempts: {captureAttempts}
+              capture attempts: {captureAttempts}
             </p>
           </div>
         )}
 
         <div className="text-xs text-muted-foreground text-center space-y-1">
-          <p>🧠  embeddings stored globally for backend submission</p>
-          <p>🔒 No real biometric data used</p>
+          <p>🧠 embeddings stored globally for backend submission</p>
+          <p>🔒 Real biometric data from API</p>
         </div>
       </CardContent>
     </Card>
