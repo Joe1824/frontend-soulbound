@@ -66,7 +66,6 @@ export const RegistrationSubmission: React.FC = () => {
       setProgress(Math.min(progress, 100));
     }
 
-
     const payload = {
       walletAddress: registrationData.walletAddress,
       signature: registrationData.signature,
@@ -79,14 +78,15 @@ export const RegistrationSubmission: React.FC = () => {
     console.log("Submitting to backend:", payload);
 
     // TODO: Replace with actual API call
-    const response = await fetch('http://localhost:5000/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/register`;
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
     const result = await response.json();
-    
+
     return {
       success: result.message,
       tokenId: result.tokenId,
@@ -102,15 +102,21 @@ export const RegistrationSubmission: React.FC = () => {
 
     try {
       // Validate required data
-      const { walletAddress, signature, message, biometricData,profile,AadharNumber } =
-        registrationData;
+      const {
+        walletAddress,
+        signature,
+        message,
+        biometricData,
+        profile,
+        AadharNumber,
+      } = registrationData;
 
       if (
         !walletAddress ||
         !signature ||
         !message ||
         !biometricData ||
-        !profile||
+        !profile ||
         !AadharNumber
       ) {
         throw new Error("Missing required registration data");
@@ -187,15 +193,21 @@ export const RegistrationSubmission: React.FC = () => {
 
   // Auto-validate data on component mount
   useEffect(() => {
-    const {  walletAddress, signature, message, biometricData,profile,AadharNumber } =
-      registrationData;
+    const {
+      walletAddress,
+      signature,
+      message,
+      biometricData,
+      profile,
+      AadharNumber,
+    } = registrationData;
 
     if (
       !walletAddress ||
       !signature ||
       !message ||
       !biometricData ||
-      !profile || 
+      !profile ||
       !AadharNumber
     ) {
       toast({
@@ -207,9 +219,22 @@ export const RegistrationSubmission: React.FC = () => {
   }, [registrationData, toast]);
 
   const isDataComplete = () => {
-    const { walletAddress, signature, message, biometricData, profile, AadharNumber } =
-      registrationData;
-    return walletAddress && signature && message && biometricData && profile && AadharNumber;
+    const {
+      walletAddress,
+      signature,
+      message,
+      biometricData,
+      profile,
+      AadharNumber,
+    } = registrationData;
+    return (
+      walletAddress &&
+      signature &&
+      message &&
+      biometricData &&
+      profile &&
+      AadharNumber
+    );
   };
 
   return (
@@ -335,7 +360,9 @@ export const RegistrationSubmission: React.FC = () => {
                         size="sm"
                         onClick={() =>
                           window.open(
-                            `https://etherscan.io/tx/${submissionResult.transactionHash}`,
+                            `${
+                              import.meta.env.VITE_BLOCKCHAIN_EXPLORER_URL
+                            }/tx/${submissionResult.transactionHash}`,
                             "_blank"
                           )
                         }

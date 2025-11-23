@@ -58,7 +58,7 @@ export const BiometricCapture: React.FC = () => {
       }, 100);
 
       // Call the API
-      const response = await fetch("http://127.0.0.1:7700/start-liveness", {
+      const response = await fetch(`${import.meta.env.VITE_BIOMETRIC_API_URL}/start-liveness`, {
         method: "POST", // Assuming POST, adjust if needed
         headers: {
           "Content-Type": "application/json",
