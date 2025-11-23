@@ -250,7 +250,7 @@ export const BiometricCapture: React.FC = () => {
               <div>
                 <p className="text-muted-foreground">Embeddings</p>
                 <p className="font-mono text-xs">
-                  [{lastCaptureData.embeddings.slice(0, 5).join(", ")}...]
+                   [.....]
                 </p>
               </div>
             </div>
