@@ -74,7 +74,7 @@ export const BiometricCapture: React.FC = () => {
       clearInterval(interval);
 
       if (data.success) {
-        if (data.result.verdict === "Live Verified (peak-pass)") {
+        if (/live.*verified/i.test(data.result.verdict)) {
           // Successful liveness
           const biometricData: BiometricData = {
             confidence: data.result.avg_live,
@@ -93,7 +93,7 @@ export const BiometricCapture: React.FC = () => {
           setIsCapturing(false);
 
           triggerSuccessAnimation(cardRef.current);
-        } else if (data.result.verdict === "Spoof Detected") {
+        } else if (/spoof/i.test(data.result.verdict)) {
           // Spoof detected
           setError("Spoof detected. Please try again with a real face.");
           setIsCapturing(false);
